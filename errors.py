@@ -21,3 +21,34 @@ class IllegalCharacterError(Error):
     def __init__(self, pos_start, pos_end, details) -> None:
         super().__init__(pos_start, pos_end, "Illegal Character", details)
 
+
+class InvalidSyntaxError(Error):
+    def __init__(self, pos_start, pos_end, details) -> None:
+        super().__init__(pos_start, pos_end, "Invalid Syntax", details)
+
+
+"""POSITION"""
+
+
+class Position:
+    """Keeps track of the position of the lexer."""
+
+    def __init__(self, idx, ln, col, fn, ftxt) -> None:
+        self.idx = idx
+        self.ln = ln
+        self.col = col
+        self.fn = fn
+        self.ftxt = ftxt
+
+    def advance(self, current_char=None):
+        self.idx += 1
+        self.col += 1
+
+        if current_char == "\n":
+            self.ln += 1
+            self.col = 0
+
+        return self
+
+    def copy(self):
+        return Position(self.idx, self.ln, self.col, self.fn, self.ftxt)
