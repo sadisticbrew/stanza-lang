@@ -2,6 +2,7 @@ from constants import (
     DIGITS,
     TT_DIVIDE,
     TT_EOF,
+    TT_EXPO,
     TT_FLOAT,
     TT_INT,
     TT_LPAREN,
@@ -11,7 +12,7 @@ from constants import (
     TT_PLUS,
     TT_RPAREN,
 )
-from errors import *
+from errors import IllegalCharacterError, Position
 
 
 class Token:
@@ -76,6 +77,10 @@ class Lexer:
                 tokens.append(Token(TT_MODULO, pos_start=self.pos.copy()))
                 self._advance()
 
+            elif self.current_char == "^":
+                tokens.append(Token(TT_EXPO, pos_start=self.pos.copy()))
+                self._advance()
+
             elif self.current_char == "(":
                 tokens.append(Token(TT_LPAREN, pos_start=self.pos.copy()))
                 self._advance()
@@ -88,9 +93,7 @@ class Lexer:
                 pos_start = self.pos.copy()
                 char = self.current_char
                 self._advance()
-                return [], errors.IllegalCharacterError(
-                    pos_start, self.pos, f"' {char} '"
-                )
+                return [], IllegalCharacterError(pos_start, self.pos, f"' {char} '")
         tokens.append(Token(TT_EOF, pos_start=self.pos))
         return tokens, None
 

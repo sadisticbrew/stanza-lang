@@ -1,3 +1,4 @@
+from interpreter import Interpreter
 from lexer import Lexer
 from parser import Parser
 
@@ -12,4 +13,8 @@ def run(filename, text):
     print(tokens)
     parser = Parser(tokens)
     ast = parser.parse()
+    if ast.error:
+        return None, ast.error
+    interpreter = Interpreter()
+    interpreter.visit(ast.node)
     return ast.node, ast.error

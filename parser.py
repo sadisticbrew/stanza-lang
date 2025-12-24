@@ -1,7 +1,18 @@
 import errors
-from constants import *
+from constants import (
+    TT_DIVIDE,
+    TT_EOF,
+    TT_EXPO,
+    TT_FLOAT,
+    TT_INT,
+    TT_LPAREN,
+    TT_MINUS,
+    TT_MUL,
+    TT_PLUS,
+    TT_RPAREN,
+)
 from lexer import Token
-from nodes import BinOpNode, NumberNode, UnaryOpNode
+from nodes import BinOpNode, NumberNode, PowerOpNode, UnaryOpNode
 
 """ParseResult"""
 
@@ -91,8 +102,21 @@ class Parser:
             )
         )
 
+    def specialist(self):
+        result = ParseResult()
+        factor = result.register(self.factor())
+        if result.error:
+            return result
+        if self.current_token.type == TT_EXPO:
+            result.register(self._advance())
+            right = result.register(self.specialist())
+            if result.error:
+                return result
+            return result.success(PowerOpNode(factor, right))
+        return result.success(factor)
+
     def term(self):
-        return self.bin_op(self.factor, (TT_MUL, TT_DIVIDE))
+        return self.bin_op(self.specialist, (TT_MUL, TT_DIVIDE))
 
     def expression(self):
         return self.bin_op(self.term, (TT_PLUS, TT_MINUS))

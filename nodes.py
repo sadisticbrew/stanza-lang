@@ -1,8 +1,10 @@
+from lexer import Token
+
 """NODES"""
 
 
 class NumberNode:
-    def __init__(self, token) -> None:
+    def __init__(self, token: Token) -> None:
         self.token = token
 
     def __repr__(self) -> str:
@@ -26,3 +28,12 @@ class UnaryOpNode:
 
     def __repr__(self) -> str:
         return f"({self.op},{self.node})"
+
+
+class PowerOpNode:
+    def __init__(self, base, exponent) -> None:
+        self.base = base
+        self.exponent = exponent
+
+    def __repr__(self) -> str:
+        return f"({self.base}, EXP, {self.exponent})"
