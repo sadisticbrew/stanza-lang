@@ -16,5 +16,6 @@ def run(filename, text):
     if ast.error:
         return None, ast.error
     interpreter = Interpreter()
-    interpreter.visit(ast.node)
-    return ast.node, ast.error
+    result = interpreter.visit(ast.node)
+    print(ast.node)
+    return result.value, result.error

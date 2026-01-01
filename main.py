@@ -1,7 +1,7 @@
 import shell
 
 while True:
-    text = input("basic > ")
+    text = input("stanza >> ")
     result, error = shell.run("<stdin>", text)
     if not error:
         print(result)

@@ -6,6 +6,8 @@ from lexer import Token
 class NumberNode:
     def __init__(self, token: Token) -> None:
         self.token = token
+        self.pos_start = token.pos_start
+        self.pos_end = token.pos_end
 
     def __repr__(self) -> str:
         return f"{self.token}"
@@ -16,6 +18,8 @@ class BinOpNode:
         self.op = op_token
         self.left_node = left_node
         self.right_node = right_node
+        self.pos_start = self.left_node.pos_start
+        self.pos_end = self.right_node.pos_end
 
     def __repr__(self) -> str:
         return f"({self.left_node}, {self.op}, {self.right_node})"
@@ -25,6 +29,8 @@ class UnaryOpNode:
     def __init__(self, op_token, node) -> None:
         self.op = op_token
         self.node = node
+        self.pos_start = self.op.pos_start
+        self.pos_end = self.node.pos_end
 
     def __repr__(self) -> str:
         return f"({self.op},{self.node})"
@@ -34,6 +40,8 @@ class PowerOpNode:
     def __init__(self, base, exponent) -> None:
         self.base = base
         self.exponent = exponent
+        self.pos_start = self.base.pos_start
+        self.pos_end = self.exponent.pos_end
 
     def __repr__(self) -> str:
         return f"({self.base}, EXP, {self.exponent})"
