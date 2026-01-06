@@ -2,9 +2,12 @@ import errors
 from constants import (
     TT_DIVIDE,
     TT_EOF,
+    TT_EQ,
     TT_EXPO,
     TT_FLOAT,
+    TT_IDENTIFIER,
     TT_INT,
+    TT_KEYWORD,
     TT_LPAREN,
     TT_MINUS,
     TT_MUL,
@@ -12,7 +15,14 @@ from constants import (
     TT_RPAREN,
 )
 from lexer import Token
-from nodes import BinOpNode, NumberNode, PowerOpNode, UnaryOpNode
+from nodes import (
+    BinOpNode,
+    NumberNode,
+    PowerOpNode,
+    UnaryOpNode,
+    VarAccessNode,
+    VarAssignmentNode,
+)
 
 """ParseResult"""
 
@@ -80,6 +90,10 @@ class Parser:
             result.register(self._advance())
             return result.success(NumberNode(token))
 
+        elif token.type == TT_IDENTIFIER:
+            result.register(self._advance())
+            return result.success(VarAccessNode(token))
+
         elif token.type == TT_LPAREN:
             result.register(self._advance())
             expression = result.register(self.expression())
@@ -119,7 +133,42 @@ class Parser:
         return self.bin_op(self.specialist, (TT_MUL, TT_DIVIDE))
 
     def expression(self):
-        return self.bin_op(self.term, (TT_PLUS, TT_MINUS))
+        res = ParseResult()
+        if self.current_token.matches(TT_KEYWORD, "let"):
+            res.register(self._advance())
+            if self.current_token.type != TT_IDENTIFIER:
+                return res.failure(
+                    errors.InvalidSyntaxError(
+                        self.current_token.pos_start,
+                        self.current_token.pos_end,
+                        "Expected identifier",
+                    )
+                )
+            var_name = self.current_token.value
+            res.register(self._advance())
+            if self.current_token.type != TT_EQ:
+                return res.failure(
+                    errors.InvalidSyntaxError(
+                        self.current_token.pos_start,
+                        self.current_token.pos_end,
+                        "Expected '='",
+                    )
+                )
+            res.register(self._advance())
+            value = res.register(self.expression())
+            if res.error:
+                return res
+            return res.success(VarAssignmentNode(var_name, value))
+        node = res.register(self.bin_op(self.term, (TT_PLUS, TT_MINUS)))
+        if res.error:
+            return res.failure(
+                errors.InvalidSyntaxError(
+                    self.current_token.pos_start,
+                    self.current_token.pos_end,
+                    "Expected 'let', int, float, identifier, '+', '-' , '*', or '/'.",
+                )
+            )
+        return res.success(node)
 
     def bin_op(self, func, ops):
         result = ParseResult()

@@ -1,6 +1,34 @@
 from constants import TT_DIVIDE, TT_MINUS, TT_MUL, TT_PLUS
 from errors import RTError
-from nodes import BinOpNode, NumberNode, PowerOpNode, UnaryOpNode
+from nodes import (
+    BinOpNode,
+    NumberNode,
+    PowerOpNode,
+    UnaryOpNode,
+    VarAccessNode,
+    VarAssignmentNode,
+)
+
+"""Symbol Table"""
+
+
+class SymbolTable:
+    def __init__(self) -> None:
+        self.symbols = {}
+        self.parent = None
+
+    def get(self, name):
+        value = self.symbols.get(name, None)
+        if not value and self.parent:
+            return self.parent.get(name)
+        return value
+
+    def set(self, name, value):
+        self.symbols[name] = value
+
+    def remove(self, name):
+        del self.symbols[name]
+
 
 """RTResult"""
 
@@ -73,6 +101,9 @@ class Number:
 
 
 class Interpreter:
+    def __init__(self, symbol_table: SymbolTable) -> None:
+        self.symbol_table = symbol_table
+
     def visit(self, node):
         method_name = f"visit_{type(node).__name__}"
         method = getattr(self, method_name, self.no_visit_method)
@@ -134,3 +165,23 @@ class Interpreter:
         if error:
             return res.failure(error)
         return res.success(result.set_pos(node.pos_start, node.pos_end))
+
+    def visit_VarAssignmentNode(self, node: VarAssignmentNode):
+        res = RTResult()
+        var_name = node.var_name
+        value = res.register(self.visit(node.value))
+        if res.error:
+            return res
+        self.symbol_table.set(var_name, value)
+        return res.success(value)
+
+    def visit_VarAccessNode(self, node: VarAccessNode):
+        res = RTResult()
+        var_name = node.var_access_tok.value
+        value = self.symbol_table.get(var_name)
+        if not value:
+            return res.failure(
+                RTError(node.pos_start, node.pos_end, f"{var_name} not defined.")
+            )
+
+        return res.success(value)

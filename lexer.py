@@ -1,10 +1,16 @@
 from constants import (
     DIGITS,
+    KEYWORDS,
+    LETTERS,
+    LETTERS_DIGITS,
     TT_DIVIDE,
     TT_EOF,
+    TT_EQ,
     TT_EXPO,
     TT_FLOAT,
+    TT_IDENTIFIER,
     TT_INT,
+    TT_KEYWORD,
     TT_LPAREN,
     TT_MINUS,
     TT_MODULO,
@@ -25,6 +31,9 @@ class Token:
             self.pos_end.advance()
         if pos_end:
             self.pos_end = pos_end
+
+    def matches(self, tok_type, keyword):
+        return self.type == tok_type and self.value == keyword
 
     def __repr__(self) -> str:
         if self.value:
@@ -58,6 +67,10 @@ class Lexer:
 
             elif self.current_char in DIGITS:
                 tokens.append(self.make_number())
+
+            elif self.current_char in LETTERS:
+                tokens.append(self.make_identifier())
+
             elif self.current_char == "+":
                 tokens.append(Token(TT_PLUS, pos_start=self.pos.copy()))
                 self._advance()
@@ -79,6 +92,10 @@ class Lexer:
 
             elif self.current_char == "^":
                 tokens.append(Token(TT_EXPO, pos_start=self.pos.copy()))
+                self._advance()
+
+            elif self.current_char == "=":
+                tokens.append(Token(TT_EQ, pos_start=self.pos.copy()))
                 self._advance()
 
             elif self.current_char == "(":
@@ -116,3 +133,12 @@ class Lexer:
             return Token(
                 TT_FLOAT, float(num_str), pos_start=pos_start, pos_end=self.pos
             )
+
+    def make_identifier(self):
+        id_str = ""
+        pos_start = self.pos.copy()
+        while self.current_char and self.current_char in LETTERS + "_":
+            id_str += self.current_char
+            self._advance()
+        token_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
+        return Token(token_type, id_str, pos_start, pos_end=self.pos)

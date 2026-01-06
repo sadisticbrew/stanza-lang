@@ -45,3 +45,22 @@ class PowerOpNode:
 
     def __repr__(self) -> str:
         return f"({self.base}, EXP, {self.exponent})"
+
+
+class VarAssignmentNode:
+    def __init__(self, var_name, value) -> None:
+        self.var_name = var_name
+        self.value = value
+
+    def __repr__(self) -> str:
+        return f"({self.var_name}, EQ, {self.value})"
+
+
+class VarAccessNode:
+    def __init__(self, var_access_tok: Token) -> None:
+        self.var_access_tok = var_access_tok
+        self.pos_start = self.var_access_tok.pos_start
+        self.pos_end = self.var_access_tok.pos_end
+
+    def __repr__(self) -> str:
+        return f"({self.var_access_tok})"

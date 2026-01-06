@@ -1,6 +1,9 @@
-from interpreter import Interpreter
+from interpreter import Interpreter, SymbolTable
 from lexer import Lexer
 from parser import Parser
+
+global_table = SymbolTable()
+global_table.set("null", 0)
 
 
 def run(filename, text):
@@ -13,9 +16,9 @@ def run(filename, text):
     print(tokens)
     parser = Parser(tokens)
     ast = parser.parse()
+    print(ast.node)
     if ast.error:
         return None, ast.error
-    interpreter = Interpreter()
+    interpreter = Interpreter(global_table)
     result = interpreter.visit(ast.node)
-    print(ast.node)
     return result.value, result.error
