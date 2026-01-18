@@ -1,4 +1,4 @@
-from lexer import Token
+from .lexer import Token
 
 """NODES"""
 
@@ -17,6 +17,7 @@ class BinOpNode:
     def __init__(self, left_node, op_token, right_node) -> None:
         self.op = op_token
         self.left_node = left_node
+
         self.right_node = right_node
         self.pos_start = self.left_node.pos_start
         self.pos_end = self.right_node.pos_end
@@ -48,12 +49,19 @@ class PowerOpNode:
 
 
 class VarAssignmentNode:
-    def __init__(self, var_name, value) -> None:
+    def __init__(self, var_name, value, pos_start, pos_end) -> None:
         self.var_name = var_name
         self.value = value
+        self.pos_start = pos_start
+        self.pos_end = pos_end
 
     def __repr__(self) -> str:
         return f"({self.var_name}, EQ, {self.value})"
+
+
+class VarReassignmentNode(VarAssignmentNode):
+    def __init__(self, var_name, value, pos_start, pos_end) -> None:
+        super().__init__(var_name, value, pos_start, pos_end)
 
 
 class VarAccessNode:
@@ -64,3 +72,10 @@ class VarAccessNode:
 
     def __repr__(self) -> str:
         return f"({self.var_access_tok})"
+
+
+class ComparisionNode:
+    def __init__(self, left, comp_tok, right) -> None:
+        self.left_node = left
+        self.comp_tok = comp_tok
+        self.right_node = right

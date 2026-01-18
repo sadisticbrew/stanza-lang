@@ -20,5 +20,12 @@ TT_EOF = "EOF"
 TT_EQ = "EQ"
 TT_IDENTIFIER = "IDENTIFIER"
 TT_KEYWORD = "KEYWORD"
+TT_EE = "EE"
+TT_NE = "NE"
+TT_LT = "LT"
+TT_GT = "GT"
+TT_LTE = "LTE"
+TT_GTE = "GTE"
 
-KEYWORDS = ["let"]
+KEYWORDS = ["let", "NOT", "AND", "OR"]
+BOOLEANS = ["fact", "cap"]

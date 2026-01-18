@@ -1,4 +1,4 @@
-from string_with_arrows import string_with_arrows
+from .string_with_arrows import string_with_arrows
 
 
 class Error:
@@ -19,17 +19,22 @@ class Error:
 
 class IllegalCharacterError(Error):
     def __init__(self, pos_start, pos_end, details) -> None:
-        super().__init__(pos_start, pos_end, "Illegal Character", details)
+        super().__init__(pos_start, pos_end, "IllegalCharacterError", details)
 
 
 class InvalidSyntaxError(Error):
     def __init__(self, pos_start, pos_end, details) -> None:
-        super().__init__(pos_start, pos_end, "Invalid Syntax", details)
+        super().__init__(pos_start, pos_end, "InvalidSyntaxError", details)
 
 
 class RTError(Error):
     def __init__(self, pos_start, pos_end, details) -> None:
-        super().__init__(pos_start, pos_end, "Runtime Error", details)
+        super().__init__(pos_start, pos_end, "RuntimeError", details)
+
+
+class ExpectedCharError(Error):
+    def __init__(self, pos_start, pos_end, details) -> None:
+        super().__init__(pos_start, pos_end, "ExpectedCharError", details)
 
 
 """POSITION"""

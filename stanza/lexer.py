@@ -1,24 +1,29 @@
-from constants import (
+from .constants import (
     DIGITS,
     KEYWORDS,
     LETTERS,
-    LETTERS_DIGITS,
     TT_DIVIDE,
+    TT_EE,
     TT_EOF,
     TT_EQ,
     TT_EXPO,
     TT_FLOAT,
+    TT_GT,
+    TT_GTE,
     TT_IDENTIFIER,
     TT_INT,
     TT_KEYWORD,
     TT_LPAREN,
+    TT_LT,
+    TT_LTE,
     TT_MINUS,
     TT_MODULO,
     TT_MUL,
+    TT_NE,
     TT_PLUS,
     TT_RPAREN,
 )
-from errors import IllegalCharacterError, Position
+from .errors import ExpectedCharError, IllegalCharacterError, Position
 
 
 class Token:
@@ -62,59 +67,78 @@ class Lexer:
         tokens = []
 
         while self.current_char:
-            if self.current_char in " \t":
+            char = self.current_char
+
+            # TODO: This long elif chain CAN be replaced with a shorter one by using dictionary to map character and their enum token_type in constants.py but I am too lazy to do that right now.
+            if char in " \t":
                 self._advance()
 
-            elif self.current_char in DIGITS:
-                tokens.append(self.make_number())
+            elif char in DIGITS:
+                tokens.append(self._make_number())
 
-            elif self.current_char in LETTERS:
-                tokens.append(self.make_identifier())
+            elif char.isalpha() or char == "_":
+                tokens.append(self._make_identifier())
 
-            elif self.current_char == "+":
+            elif char == "+":
                 tokens.append(Token(TT_PLUS, pos_start=self.pos.copy()))
                 self._advance()
-            elif self.current_char == "-":
+            elif char == "-":
                 tokens.append(Token(TT_MINUS, pos_start=self.pos.copy()))
                 self._advance()
 
-            elif self.current_char == "*":
+            elif char == "*":
                 tokens.append(Token(TT_MUL, pos_start=self.pos.copy()))
                 self._advance()
 
-            elif self.current_char == "/":
+            elif char == "/":
                 tokens.append(Token(TT_DIVIDE, pos_start=self.pos.copy()))
                 self._advance()
 
-            elif self.current_char == "%":
+            elif char == "%":
                 tokens.append(Token(TT_MODULO, pos_start=self.pos.copy()))
                 self._advance()
 
-            elif self.current_char == "^":
+            elif char == "^":
                 tokens.append(Token(TT_EXPO, pos_start=self.pos.copy()))
                 self._advance()
 
-            elif self.current_char == "=":
-                tokens.append(Token(TT_EQ, pos_start=self.pos.copy()))
+            elif char == "!":
+                token, error = self._make_not_equal()
+                if error:
+                    return [], error
+                tokens.append(token)
+
+            elif char == "<":
+                tokens.append(self._make_less_than())
                 self._advance()
 
-            elif self.current_char == "(":
+            elif char == ">":
+                tokens.append(self._make_greater_than())
+                self._advance()
+
+            elif char == "=":
+                tokens.append(self._make_equals())
+                self._advance()
+
+            elif char == "(":
                 tokens.append(Token(TT_LPAREN, pos_start=self.pos.copy()))
                 self._advance()
 
-            elif self.current_char == ")":
+            elif char == ")":
                 tokens.append(Token(TT_RPAREN, pos_start=self.pos.copy()))
                 self._advance()
 
             else:
                 pos_start = self.pos.copy()
-                char = self.current_char
+                bad_char = char
                 self._advance()
-                return [], IllegalCharacterError(pos_start, self.pos, f"' {char} '")
+                return [], IllegalCharacterError(pos_start, self.pos, f"' {bad_char} '")
         tokens.append(Token(TT_EOF, pos_start=self.pos))
         return tokens, None
 
-    def make_number(self):
+    """----------helper funcs----------"""
+
+    def _make_number(self):
         num_str = ""
         dot_count = 0
         pos_start = self.pos.copy()
@@ -134,7 +158,7 @@ class Lexer:
                 TT_FLOAT, float(num_str), pos_start=pos_start, pos_end=self.pos
             )
 
-    def make_identifier(self):
+    def _make_identifier(self):
         id_str = ""
         pos_start = self.pos.copy()
         while self.current_char and self.current_char in LETTERS + "_":
@@ -142,3 +166,38 @@ class Lexer:
             self._advance()
         token_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
         return Token(token_type, id_str, pos_start, pos_end=self.pos)
+
+    def _make_not_equal(self):
+        pos_start = self.pos.copy()
+        self._advance()
+        if self.current_char == "=":
+            self._advance()
+            return Token(TT_NE, pos_start=pos_start), None
+        self._advance()
+        return None, ExpectedCharError(pos_start, self.pos, "Expected '='")
+
+    def _make_equals(self):
+        pos_start = self.pos.copy()
+        self._advance()
+        if self.current_char == "=":
+            self._advance()
+            return Token(TT_EE, pos_start=pos_start)
+        return Token(TT_EQ, pos_start=pos_start)
+
+    def _make_less_than(self):
+        pos_start = self.pos.copy()
+        self._advance()
+
+        if self.current_char == "=":
+            return Token(TT_LTE, pos_start=pos_start)
+
+        return Token(TT_LT, pos_start=pos_start)
+
+    def _make_greater_than(self):
+        pos_start = self.pos.copy()
+        self._advance()
+
+        if self.current_char == "=":
+            return Token(TT_GTE, pos_start=pos_start)
+
+        return Token(TT_GT, pos_start=pos_start)

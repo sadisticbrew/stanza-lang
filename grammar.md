@@ -1,5 +1,10 @@
 expression :  KEYWORD:LET IDENTIFIER EQ EXPR
-              term ((PLUS|MINUS) term)*
+              comp-expr ((KEYWORD: AND| KEYWORD: OR) comp-expr)*
+
+comp-expr : NOT comp-expr
+            arith-expr ((EE|LTE|GTE|GT|LT) arith-expr)*
+            
+artih-expr :  term ((PLUS|MINUS) term)*
 
 term : factor ((MULTIPLY|DIVIDE) factor)*
 

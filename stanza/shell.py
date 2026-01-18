@@ -1,6 +1,4 @@
-from interpreter import Interpreter, SymbolTable
-from lexer import Lexer
-from parser import Parser
+from stanza import Interpreter, Lexer, Parser, SymbolTable
 
 global_table = SymbolTable()
 global_table.set("null", 0)

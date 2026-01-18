@@ -53,6 +53,17 @@ This is where the magic happens. The interpreter "visits" every node in the AST 
 * Add `if/else` conditionals.
 * Add loop structures (`for`/`while`).
 
+### **6. Formal Grammar (EBNF)**
+
+* **Assignment:** `let <identifier> EQ <expression>`
+* **Comparison:** `<expression> (EE | NE | LT | GT) <expression>`
+* **Expression:** `<term> ((PLUS | MINUS) <term>)*`
+
+### **7. Known Issues**
+
+* **Reassignment:** The parser detects `IDENTIFIER` but currently struggles to distinguish between a variable access (reading `x`) and a reassignment (writing `x = 5`).
+* **Memory:** The `SymbolTable` grows indefinitely. Need to implement scopes (local variables) to clear memory when exiting functions.
+
 ---
 ## Decision Log:
 
@@ -63,7 +74,3 @@ This is where the magic happens. The interpreter "visits" every node in the AST 
 | **2026-01-02** | **Adopted Visitor Pattern for Interpreter** | To execute code, we needed a way to traverse the AST. We chose the **Visitor Pattern**, where the `Interpreter` class defines a `visit_NodeName` method for every node type. This keeps execution logic separate from parsing logic. |
 | **2026-01-02** |   **Centralized Runtime Error Handling**    | We needed a way to catch logic errors (like dividing by zero) without crashing the whole program. Created a specific `RTError` class to handle these.                                                                                |
 | **2026-01-06** |     **Implemented Global Symbol Table**     | To support variables, we needed a way to store state. Decided on a `SymbolTable` dictionary. Currently, it is a single global scope, meaning all variables are accessible everywhere.                                                |
-
-
-
-
