@@ -11,5 +11,10 @@ term : factor ((MULTIPLY|DIVIDE) factor)*
 factor : INT|FLOAT
        : (PLUS | MINUS) INT|FLOAT
        : LPAREN expression RPAREN
+       : if-expr
+       
+if-expr : KEYWORD:IF condition KEYWORD:THEN expr
+        : (KEYWORD:ELIF condition KEYWORD:THEN expr)*
+        : (KEYWORD:ELSE expr)?
 
 variable : let var_name = value
