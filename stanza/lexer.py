@@ -110,15 +110,12 @@ class Lexer:
 
             elif char == "<":
                 tokens.append(self._make_less_than())
-                self._advance()
 
             elif char == ">":
                 tokens.append(self._make_greater_than())
-                self._advance()
 
             elif char == "=":
                 tokens.append(self._make_equals())
-                self._advance()
 
             elif char == "(":
                 tokens.append(Token(TT_LPAREN, pos_start=self.pos.copy()))
@@ -189,6 +186,7 @@ class Lexer:
         self._advance()
 
         if self.current_char == "=":
+            self._advance()
             return Token(TT_LTE, pos_start=pos_start)
 
         return Token(TT_LT, pos_start=pos_start)
@@ -198,6 +196,7 @@ class Lexer:
         self._advance()
 
         if self.current_char == "=":
+            self._advance()
             return Token(TT_GTE, pos_start=pos_start)
 
         return Token(TT_GT, pos_start=pos_start)
