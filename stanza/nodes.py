@@ -79,3 +79,17 @@ class ComparisionNode:
         self.left_node = left
         self.comp_tok = comp_tok
         self.right_node = right
+
+
+class IfNode:
+    def __init__(self, cases, else_case):
+        self.cases = cases
+        self.else_expr = else_case
+
+        self.pos_start = self.cases[0][0].pos_start
+        self.pos_end = (
+            self.else_expr.pos_end if self.else_expr else self.cases[-1][1].pos_end
+        )
+
+    def __repr__(self) -> str:
+        return f"IfNode(cases={repr(self.cases)}, else_expr={repr(self.else_expr)})"

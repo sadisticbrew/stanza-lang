@@ -24,6 +24,7 @@ from .errors import InvalidSyntaxError
 from .lexer import Token
 from .nodes import (
     BinOpNode,
+    IfNode,
     NumberNode,
     PowerOpNode,
     UnaryOpNode,
@@ -135,6 +136,13 @@ class Parser:
                         "Expected ')'",
                     )
                 )
+
+        elif token.matches(TT_KEYWORD, "IF"):
+            if_expr = result.register(self.if_expr())
+            if result.error:
+                return result
+            return result.success(if_expr)
+
         return result.failure(
             InvalidSyntaxError(token.pos_start, token.pos_end, "Expected int or float.")
         )
@@ -185,10 +193,81 @@ class Parser:
                 InvalidSyntaxError(
                     self.current_token.pos_start,
                     self.current_token.pos_end,
-                    "Expected 'let', int, float, identifier, '+', '-' , '*', 'NOT' or '/'.",
+                    "Expected 'let', int, float, identifier, '+', '-' , '*', 'NOT' or '/'. (inside comp_expr)",
                 )
             )
         return res.success(node)
+
+    def if_expr(self):
+        res = ParseResult()
+        cases = []
+        else_case = None
+
+        if not self.current_token.matches(TT_KEYWORD, "IF"):
+            return res.failure(
+                InvalidSyntaxError(
+                    self.current_token.pos_start,
+                    self.current_token.pos_end,
+                    "Expected 'IF'.",
+                )
+            )
+
+        res.register(self._advance())
+
+        condition = res.register(self.expression())
+        if res.error:
+            return res
+
+        if not self.current_token.matches(TT_KEYWORD, "THEN"):
+            return res.failure(
+                InvalidSyntaxError(
+                    self.current_token.pos_start,
+                    self.current_token.pos_end,
+                    "Expected 'THEN'.",
+                )
+            )
+
+        res.register(self._advance())
+
+        expr = res.register(self.expression())
+        if res.error:
+            return res
+
+        cases.append((condition, expr))
+
+        while self.current_token.matches(TT_KEYWORD, "ELIF"):
+            res.register(self._advance())
+
+            condition = res.register(self.expression())
+            if res.error:
+                return res
+
+            if not self.current_token.matches(TT_KEYWORD, "THEN"):
+                return res.failure(
+                    InvalidSyntaxError(
+                        self.current_token.pos_start,
+                        self.current_token.pos_end,
+                        "Expected 'THEN'.",
+                    )
+                )
+
+            res.register(self._advance())
+
+            expr = res.register(self.expression())
+            if res.error:
+                return res
+            cases.append((condition, expr))
+
+        if self.current_token.matches(TT_KEYWORD, "ELSE"):
+            res.register(self._advance())
+
+            expr = res.register(self.expression())
+            if res.error:
+                return res
+
+            else_case = expr
+
+        return res.success(IfNode(cases, else_case))
 
     def expression(self):
         """
@@ -253,7 +332,7 @@ class Parser:
                 InvalidSyntaxError(
                     self.current_token.pos_start,
                     self.current_token.pos_end,
-                    "Expected 'let', int, float, identifier, '+', '-' , '*', or '/'.",
+                    "Expected 'let', int, float, identifier, '+', '-' , '*', or '/'. (inside expr)",
                 )
             )
         return res.success(node)
