@@ -27,5 +27,5 @@ TT_GT = "GT"
 TT_LTE = "LTE"
 TT_GTE = "GTE"
 
-KEYWORDS = ["let", "NOT", "AND", "OR"]
+KEYWORDS = ["let", "NOT", "AND", "OR", "IF", "THEN", "ELSE", "ELIF"]
 BOOLEANS = ["fact", "cap"]
