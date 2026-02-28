@@ -93,3 +93,32 @@ class IfNode:
 
     def __repr__(self) -> str:
         return f"IfNode(cases={repr(self.cases)}, else_expr={repr(self.else_expr)})"
+
+
+class ForNode:
+    def __init__(
+        self, var_name_tok, start_value_node, end_value_node, body, step_value_node=None
+    ) -> None:
+        self.var_name_tok = var_name_tok
+        self.start_value_node = start_value_node
+        self.end_value_node = end_value_node
+        self.body = body
+        self.step_value_node = step_value_node
+
+        self.pos_start = self.var_name_tok.pos_start
+        self.pos_end = self.body.pos_end
+
+    def __repr__(self) -> str:
+        return f"ForNode(var_name={self.var_name_tok.value} from {self.start_value_node} to {self.end_value_node} do {self.body} (step={self.step_value_node}))"
+
+
+class WhileNode:
+    def __init__(self, condition_node, body) -> None:
+        self.condition_node = condition_node
+        self.body = body
+
+        self.pos_start = self.condition_node.pos_start
+        self.pos_end = self.body.pos_end
+
+    def __repr__(self) -> str:
+        return f"WhileNode(cond={self.condition_node}, body={self.body})"

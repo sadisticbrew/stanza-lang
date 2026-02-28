@@ -24,6 +24,7 @@ from .errors import InvalidSyntaxError
 from .lexer import Token
 from .nodes import (
     BinOpNode,
+    ForNode,
     IfNode,
     NumberNode,
     PowerOpNode,
@@ -31,6 +32,7 @@ from .nodes import (
     VarAccessNode,
     VarAssignmentNode,
     VarReassignmentNode,
+    WhileNode,
 )
 
 """----------ParseResult----------"""
@@ -81,6 +83,19 @@ class Parser:
         if self.token_index < len(self.tokens):
             self.current_token: Token = self.tokens[self.token_index]
         return self.current_token
+
+    def _expect_keyword(self, keyword):
+        res = ParseResult()
+        if not self.current_token.matches(TT_KEYWORD, keyword):
+            return res.failure(
+                InvalidSyntaxError(
+                    self.current_token.pos_start,
+                    self.current_token.pos_end,
+                    f"Expected '{keyword}'.",
+                )
+            )
+        res.register(self._advance())
+        return res.success(None)
 
     def parse(self):
         result = self.expression()
@@ -143,6 +158,18 @@ class Parser:
                 return result
             return result.success(if_expr)
 
+        elif token.matches(TT_KEYWORD, "FOR"):
+            for_expr = result.register(self.for_expr())
+            if result.error:
+                return result
+            return result.success(for_expr)
+
+        elif token.matches(TT_KEYWORD, "WHILE"):
+            while_expr = result.register(self.while_expr())
+            if result.error:
+                return result
+            return result.success(while_expr)
+
         return result.failure(
             InvalidSyntaxError(token.pos_start, token.pos_end, "Expected int or float.")
         )
@@ -183,19 +210,25 @@ class Parser:
             if res.error:
                 return res
             return res.success(UnaryOpNode(op_tok, node))
+
+        start_index = self.token_index
         node = res.register(
             self._binary_operation(
                 self.arithmetic_expr, (TT_EE, TT_NE, TT_GT, TT_GTE, TT_LTE, TT_LT)
             )
         )
         if res.error:
-            return res.failure(
-                InvalidSyntaxError(
-                    self.current_token.pos_start,
-                    self.current_token.pos_end,
-                    "Expected 'let', int, float, identifier, '+', '-' , '*', 'NOT' or '/'. (inside comp_expr)",
+            # If we haven't moved forward, show the general error
+            if self.token_index == start_index:
+                return res.failure(
+                    InvalidSyntaxError(
+                        self.current_token.pos_start,
+                        self.current_token.pos_end,
+                        "Expected 'let', int, float, identifier, '+', '-' , '*', 'NOT' or '/'. (inside comp_expr)",
+                    )
                 )
-            )
+            # If we DID move forward, keep the specific error
+            return res
         return res.success(node)
 
     def if_expr(self):
@@ -203,31 +236,17 @@ class Parser:
         cases = []
         else_case = None
 
-        if not self.current_token.matches(TT_KEYWORD, "IF"):
-            return res.failure(
-                InvalidSyntaxError(
-                    self.current_token.pos_start,
-                    self.current_token.pos_end,
-                    "Expected 'IF'.",
-                )
-            )
-
-        res.register(self._advance())
+        res.register(self._expect_keyword("IF"))
+        if res.error:
+            return res
 
         condition = res.register(self.expression())
         if res.error:
             return res
 
-        if not self.current_token.matches(TT_KEYWORD, "THEN"):
-            return res.failure(
-                InvalidSyntaxError(
-                    self.current_token.pos_start,
-                    self.current_token.pos_end,
-                    "Expected 'THEN'.",
-                )
-            )
-
-        res.register(self._advance())
+        res.register(self._expect_keyword("THEN"))
+        if res.error:
+            return res
 
         expr = res.register(self.expression())
         if res.error:
@@ -242,16 +261,9 @@ class Parser:
             if res.error:
                 return res
 
-            if not self.current_token.matches(TT_KEYWORD, "THEN"):
-                return res.failure(
-                    InvalidSyntaxError(
-                        self.current_token.pos_start,
-                        self.current_token.pos_end,
-                        "Expected 'THEN'.",
-                    )
-                )
-
-            res.register(self._advance())
+            res.register(self._expect_keyword("THEN"))
+            if res.error:
+                return res
 
             expr = res.register(self.expression())
             if res.error:
@@ -268,6 +280,81 @@ class Parser:
             else_case = expr
 
         return res.success(IfNode(cases, else_case))
+
+    def for_expr(self):
+        res = ParseResult()
+
+        res.register(self._expect_keyword("FOR"))
+        if res.error:
+            return res
+
+        if self.current_token.type != TT_IDENTIFIER:
+            return res.failure(
+                InvalidSyntaxError(
+                    self.current_token.pos_start,
+                    self.current_token.pos_end,
+                    "Expected identifier",
+                )
+            )
+        var_name_tok = self.current_token
+        res.register(self._advance())
+
+        res.register(self._expect_keyword("IN"))
+        if res.error:
+            return res
+
+        start_value_node = res.register(self.expression())
+        if res.error:
+            return res
+
+        res.register(self._expect_keyword("TO"))
+        if res.error:
+            return res
+
+        end_value_node = res.register(self.expression())
+        if res.error:
+            return res
+
+        if self.current_token.matches(TT_KEYWORD, "STEP"):
+            res.register(self._advance())
+            step = res.register(self.expression())
+            if res.error:
+                return res
+        else:
+            step = None
+
+        res.register(self._expect_keyword("DO"))
+        if res.error:
+            return res
+
+        body = res.register(self.expression())
+        if res.error:
+            return res
+
+        return res.success(
+            ForNode(var_name_tok, start_value_node, end_value_node, body, step)
+        )
+
+    def while_expr(self):
+        res = ParseResult()
+
+        res.register(self._expect_keyword("WHILE"))
+        if res.error:
+            return res
+
+        condition = res.register(self.expression())
+        if res.error:
+            return res
+
+        res.register(self._expect_keyword("DO"))
+        if res.error:
+            return res
+
+        body = res.register(self.expression())
+        if res.error:
+            return res
+
+        return res.success(WhileNode(condition, body))
 
     def expression(self):
         """
@@ -326,15 +413,21 @@ class Parser:
                 )
 
         # case 2: std binary operations like add, sub, mul, etc.
+
+        start_index = self.token_index
         node = res.register(self._binary_operation(self.comp_expr, (TT_PLUS, TT_MINUS)))
         if res.error:
-            return res.failure(
-                InvalidSyntaxError(
-                    self.current_token.pos_start,
-                    self.current_token.pos_end,
-                    "Expected 'let', int, float, identifier, '+', '-' , '*', or '/'. (inside expr)",
+            # If we haven't moved forward, show the general error
+            if self.token_index == start_index:
+                return res.failure(
+                    InvalidSyntaxError(
+                        self.current_token.pos_start,
+                        self.current_token.pos_end,
+                        "Expected 'let', int, float, identifier, '+', '-' , '*', 'NOT' or '/'. (inside expr)",
+                    )
                 )
-            )
+            # If we DID move forward, keep the specific error
+            return res
         return res.success(node)
 
     def _binary_operation(self, func, ops):
