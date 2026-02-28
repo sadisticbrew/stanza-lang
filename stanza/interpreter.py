@@ -15,6 +15,7 @@ from .constants import (
 from .errors import RTError
 from .nodes import (
     BinOpNode,
+    ForNode,
     IfNode,
     NumberNode,
     PowerOpNode,
@@ -22,6 +23,7 @@ from .nodes import (
     VarAccessNode,
     VarAssignmentNode,
     VarReassignmentNode,
+    WhileNode,
 )
 
 """Symbol Table"""
@@ -57,7 +59,6 @@ class RTResult:
             if result.error:
                 self.error = result.error
             return result.value
-        # return result
 
     def success(self, value):
         self.value = value
@@ -318,4 +319,56 @@ class Interpreter:
             if res.error:
                 return res
             return res.success(else_value)
+        return res.success(None)
+
+    def visit_ForNode(self, node: ForNode):
+        res = RTResult()
+
+        start_value = res.register(self.visit(node.start_value_node))
+        if res.error:
+            return res
+
+        end_value = res.register(self.visit(node.end_value_node))
+        if res.error:
+            return res
+
+        if node.step_value_node:
+            step_value = res.register(self.visit(node.step_value_node))
+            if res.error:
+                return res
+        else:
+            step_value = Number(1)
+
+        i = start_value.value
+
+        def condition() -> (
+            bool
+        ):  # because assignment lambda function to a variable is explicitly discouraged by PEP 8.
+            if step_value.value >= 0:
+                return i < end_value.value
+            return i > end_value.value
+
+        while condition():
+            self.symbol_table.set(node.var_name_tok.value, Number(i))
+            i += step_value.value
+
+            res.register(self.visit(node.body))
+            if res.error:
+                return res
+        return res.success(None)
+
+    def visit_WhileNode(self, node: WhileNode):
+        res = RTResult()
+
+        while True:
+            condition = res.register(self.visit(node.condition_node))
+            if res.error:
+                return res
+
+            if not condition.is_true():
+                break
+
+            res.register(self.visit(node.body))
+            if res.error:
+                return res
         return res.success(None)

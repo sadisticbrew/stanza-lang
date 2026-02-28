@@ -17,4 +17,9 @@ if-expr : KEYWORD:IF condition KEYWORD:THEN expr
         : (KEYWORD:ELIF condition KEYWORD:THEN expr)*
         : (KEYWORD:ELSE expr)?
 
+for-expr : KEYWORD:FOR IDENTIFIER IN expr TO expr
+           (KEYWORD:STEP expr)? KEYWORD:DO expr
+
+while-expr : KEYWORD:WHILE expr KEYWORD:DO expr
+
 variable : let var_name = value
