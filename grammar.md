@@ -22,4 +22,8 @@ for-expr : KEYWORD:FOR IDENTIFIER IN expr TO expr
 
 while-expr : KEYWORD:WHILE expr KEYWORD:DO expr
 
+func-def : KEYWORD:fn IDENTIFIER?
+           LPAREN (IDENTIFIER (COMMA)*)? RPAREN
+           ARROW expr
+
 variable : let var_name = value

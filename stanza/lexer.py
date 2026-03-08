@@ -2,6 +2,8 @@ from .constants import (
     DIGITS,
     KEYWORDS,
     LETTERS,
+    TT_ARROW,
+    TT_COMMA,
     TT_DIVIDE,
     TT_EE,
     TT_EOF,
@@ -83,9 +85,9 @@ class Lexer:
                 tokens.append(Token(TT_PLUS, pos_start=self.pos.copy()))
                 self._advance()
             elif char == "-":
-                tokens.append(Token(TT_MINUS, pos_start=self.pos.copy()))
-                self._advance()
-
+                # tokens.append(Token(TT_MINUS, pos_start=self.pos.copy()))
+                # self._advance()
+                tokens.append(self._make_minus_or_arrow())
             elif char == "*":
                 tokens.append(Token(TT_MUL, pos_start=self.pos.copy()))
                 self._advance()
@@ -124,7 +126,8 @@ class Lexer:
             elif char == ")":
                 tokens.append(Token(TT_RPAREN, pos_start=self.pos.copy()))
                 self._advance()
-
+            elif char == ",":
+                tokens.append(Token(TT_COMMA, pos_start=self.pos.copy()))
             else:
                 pos_start = self.pos.copy()
                 bad_char = char
@@ -200,3 +203,14 @@ class Lexer:
             return Token(TT_GTE, pos_start=pos_start)
 
         return Token(TT_GT, pos_start=pos_start)
+
+    def _make_minus_or_arrow(self):
+        pos_start = self.pos.copy
+        tok_type = TT_MINUS
+        self._advance()
+
+        if self.current_char == ">":
+            self._advance()
+            return Token(TT_ARROW, pos_start=pos_start)
+
+        return Token(tok_type, pos_start=pos_start)
