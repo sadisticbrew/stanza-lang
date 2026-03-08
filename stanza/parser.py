@@ -152,19 +152,19 @@ class Parser:
                     )
                 )
 
-        elif token.matches(TT_KEYWORD, "IF"):
+        elif token.matches(TT_KEYWORD, "if"):
             if_expr = result.register(self.if_expr())
             if result.error:
                 return result
             return result.success(if_expr)
 
-        elif token.matches(TT_KEYWORD, "FOR"):
+        elif token.matches(TT_KEYWORD, "for"):
             for_expr = result.register(self.for_expr())
             if result.error:
                 return result
             return result.success(for_expr)
 
-        elif token.matches(TT_KEYWORD, "WHILE"):
+        elif token.matches(TT_KEYWORD, "while"):
             while_expr = result.register(self.while_expr())
             if result.error:
                 return result
@@ -236,7 +236,7 @@ class Parser:
         cases = []
         else_case = None
 
-        res.register(self._expect_keyword("IF"))
+        res.register(self._expect_keyword("if"))
         if res.error:
             return res
 
@@ -244,7 +244,7 @@ class Parser:
         if res.error:
             return res
 
-        res.register(self._expect_keyword("THEN"))
+        res.register(self._expect_keyword("then"))
         if res.error:
             return res
 
@@ -254,14 +254,14 @@ class Parser:
 
         cases.append((condition, expr))
 
-        while self.current_token.matches(TT_KEYWORD, "ELIF"):
+        while self.current_token.matches(TT_KEYWORD, "elif"):
             res.register(self._advance())
 
             condition = res.register(self.expression())
             if res.error:
                 return res
 
-            res.register(self._expect_keyword("THEN"))
+            res.register(self._expect_keyword("then"))
             if res.error:
                 return res
 
@@ -270,7 +270,7 @@ class Parser:
                 return res
             cases.append((condition, expr))
 
-        if self.current_token.matches(TT_KEYWORD, "ELSE"):
+        if self.current_token.matches(TT_KEYWORD, "else"):
             res.register(self._advance())
 
             expr = res.register(self.expression())
@@ -284,7 +284,7 @@ class Parser:
     def for_expr(self):
         res = ParseResult()
 
-        res.register(self._expect_keyword("FOR"))
+        res.register(self._expect_keyword("for"))
         if res.error:
             return res
 
@@ -299,7 +299,7 @@ class Parser:
         var_name_tok = self.current_token
         res.register(self._advance())
 
-        res.register(self._expect_keyword("IN"))
+        res.register(self._expect_keyword("in"))
         if res.error:
             return res
 
@@ -307,7 +307,7 @@ class Parser:
         if res.error:
             return res
 
-        res.register(self._expect_keyword("TO"))
+        res.register(self._expect_keyword("to"))
         if res.error:
             return res
 
@@ -315,7 +315,7 @@ class Parser:
         if res.error:
             return res
 
-        if self.current_token.matches(TT_KEYWORD, "STEP"):
+        if self.current_token.matches(TT_KEYWORD, "step"):
             res.register(self._advance())
             step = res.register(self.expression())
             if res.error:
@@ -323,7 +323,7 @@ class Parser:
         else:
             step = None
 
-        res.register(self._expect_keyword("DO"))
+        res.register(self._expect_keyword("do"))
         if res.error:
             return res
 
@@ -338,7 +338,7 @@ class Parser:
     def while_expr(self):
         res = ParseResult()
 
-        res.register(self._expect_keyword("WHILE"))
+        res.register(self._expect_keyword("while"))
         if res.error:
             return res
 
@@ -346,7 +346,7 @@ class Parser:
         if res.error:
             return res
 
-        res.register(self._expect_keyword("DO"))
+        res.register(self._expect_keyword("do"))
         if res.error:
             return res
 
