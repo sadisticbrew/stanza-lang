@@ -26,6 +26,17 @@ from .nodes import (
     WhileNode,
 )
 
+"""Context"""
+
+
+class Context:
+    def __init__(self, display_name, parent=None, parent_entry_pos=None) -> None:
+        self.display_name = display_name
+        self.parent = parent
+        self.parent_entry_pos = parent_entry_pos
+        self.symbol_table = None
+
+
 """Symbol Table"""
 
 
@@ -90,15 +101,20 @@ class Number:
     def __init__(self, value) -> None:
         self.value = value
         self.set_pos()
+        self.set_context()
 
     def set_pos(self, pos_start=None, pos_end=None):
         self.pos_start = pos_start
         self.pos_end = pos_end
         return self
 
+    def set_context(self, context=None):
+        self.context = context
+        return self
+
     def __add__(self, other):
         if isinstance(other, Number):
-            return Number(self.value + other.value), None
+            return Number(self.value + other.value).set_context(self.context), None
         return NotImplemented
 
     def __sub__(self, other):
@@ -118,6 +134,7 @@ class Number:
                     other.pos_start,
                     other.pos_end,
                     "Attempt to Divide by zero!",
+                    self.context,
                 )
             return Number(self.value / other.value), None
         return NotImplemented
@@ -128,7 +145,8 @@ class Number:
                 return None, RTError(
                     other.pos_start,
                     other.pos_end,
-                    "Attempt to divide by zero (modulo)!",
+                    "Attempt to divide by zero!",
+                    self.context,
                 )
             return Number(self.value % other.value), None
         return NotImplemented  # This helps coverage tools know this path exists
@@ -182,20 +200,20 @@ class Interpreter:
     def __init__(self, symbol_table: SymbolTable) -> None:
         self.symbol_table = symbol_table
 
-    def visit(self, node):
+    def visit(self, node, context):
         method_name = f"visit_{type(node).__name__}"
         method = getattr(self, method_name, self.no_visit_method)
-        return method(node)
+        return method(node, context)
 
-    def no_visit_method(self, node):
+    def no_visit_method(self, node, context):
         raise Exception(f"No visit_{type(node).__name__} method defined")
 
-    def visit_BinOpNode(self, node: BinOpNode):
+    def visit_BinOpNode(self, node: BinOpNode, context):
         res = RTResult()
-        left = res.register(self.visit(node.left_node))
+        left = res.register(self.visit(node.left_node, context))
         if res.error:
             return res
-        right = res.register(self.visit(node.right_node))
+        right = res.register(self.visit(node.right_node, context))
         if res.error:
             return res
         op = node.op
@@ -220,15 +238,17 @@ class Interpreter:
         else:
             return res.success(result.set_pos(node.pos_start, node.pos_end))
 
-    def visit_NumberNode(self, node: NumberNode):
+    def visit_NumberNode(self, node: NumberNode, context):
         result = RTResult()
         return result.success(
-            Number(node.token.value).set_pos(node.pos_start, node.pos_end)
+            Number(node.token.value)
+            .set_context(context)
+            .set_pos(node.pos_start, node.pos_end)
         )
 
-    def visit_UnaryOpNode(self, node: UnaryOpNode):
+    def visit_UnaryOpNode(self, node: UnaryOpNode, context):
         res = RTResult()
-        number = res.register(self.visit(node.node))
+        number = res.register(self.visit(node.node, context))
         if res.error:
             return res
         error = None
@@ -242,14 +262,16 @@ class Interpreter:
         if error:
             return res.failure(error)
 
-        return res.success(number.set_pos(node.pos_start, node.pos_end))
+        return res.success(
+            number.set_context(context).set_pos(node.pos_start, node.pos_end)
+        )
 
-    def visit_PowerOpNode(self, node: PowerOpNode):
+    def visit_PowerOpNode(self, node: PowerOpNode, context):
         res = RTResult()
-        base = res.register(self.visit(node.base))
+        base = res.register(self.visit(node.base, context))
         if res.error:
             return res
-        power = res.register(self.visit(node.exponent))
+        power = res.register(self.visit(node.exponent, context))
         if res.error:
             return res
         result, error = base**power
@@ -257,10 +279,10 @@ class Interpreter:
             return res.failure(error)
         return res.success(result.set_pos(node.pos_start, node.pos_end))
 
-    def visit_VarAssignmentNode(self, node: VarAssignmentNode):
+    def visit_VarAssignmentNode(self, node: VarAssignmentNode, context):
         res = RTResult()
         var_name = node.var_name
-        value = res.register(self.visit(node.value))
+        value = res.register(self.visit(node.value, context))
         if res.error:
             return res
         check = self.symbol_table.get(var_name)
@@ -270,17 +292,18 @@ class Interpreter:
                     node.pos_start,
                     node.pos_end,
                     f"Variable {var_name} already assigned",
+                    context,
                 )
             )
         self.symbol_table.set(var_name, value)
         return res.success(None)
 
-    def visit_VarReassignmentNode(self, node: VarReassignmentNode):
+    def visit_VarReassignmentNode(self, node: VarReassignmentNode, context):
         res = RTResult()
         var_name = node.var_name
         check = self.symbol_table.get(var_name)
         if check:
-            value = res.register(self.visit(node.value))
+            value = res.register(self.visit(node.value, context))
             self.symbol_table.set(var_name, value)
             return res.success(None)
         return res.failure(
@@ -288,52 +311,55 @@ class Interpreter:
                 node.pos_start,
                 node.pos_end,
                 f"Variable {var_name} not defined",
+                context,
             )
         )
 
-    def visit_VarAccessNode(self, node: VarAccessNode):
+    def visit_VarAccessNode(self, node: VarAccessNode, context):
         res = RTResult()
         var_name = node.var_access_tok.value
         value = self.symbol_table.get(var_name)
         if not value:
             return res.failure(
-                RTError(node.pos_start, node.pos_end, f"{var_name} not defined.")
+                RTError(
+                    node.pos_start, node.pos_end, f"{var_name} not defined.", context
+                )
             )
 
         return res.success(value)
 
-    def visit_IfNode(self, node: IfNode):
+    def visit_IfNode(self, node: IfNode, context):
         res = RTResult()
 
         for condition, expr in node.cases:
-            condition_value = res.register(self.visit(condition))
+            condition_value = res.register(self.visit(condition, context))
             if res.error:
                 return res
             if condition_value.is_true():
-                expr_value = res.register(self.visit(expr))
+                expr_value = res.register(self.visit(expr, context))
                 if res.error:
                     return res
                 return res.success(expr_value)
         if node.else_expr:
-            else_value = res.register(self.visit(node.else_expr))
+            else_value = res.register(self.visit(node.else_expr, context))
             if res.error:
                 return res
             return res.success(else_value)
         return res.success(None)
 
-    def visit_ForNode(self, node: ForNode):
+    def visit_ForNode(self, node: ForNode, context):
         res = RTResult()
 
-        start_value = res.register(self.visit(node.start_value_node))
+        start_value = res.register(self.visit(node.start_value_node, context))
         if res.error:
             return res
 
-        end_value = res.register(self.visit(node.end_value_node))
+        end_value = res.register(self.visit(node.end_value_node, context))
         if res.error:
             return res
 
         if node.step_value_node:
-            step_value = res.register(self.visit(node.step_value_node))
+            step_value = res.register(self.visit(node.step_value_node, context))
             if res.error:
                 return res
         else:
@@ -343,7 +369,7 @@ class Interpreter:
 
         def condition() -> (
             bool
-        ):  # because assignment lambda function to a variable is explicitly discouraged by PEP 8.
+        ):  # because assignment of lambda function to a variable is explicitly discouraged by PEP 8.
             if step_value.value >= 0:
                 return i < end_value.value
             return i > end_value.value
@@ -352,23 +378,23 @@ class Interpreter:
             self.symbol_table.set(node.var_name_tok.value, Number(i))
             i += step_value.value
 
-            res.register(self.visit(node.body))
+            res.register(self.visit(node.body, context))
             if res.error:
                 return res
         return res.success(None)
 
-    def visit_WhileNode(self, node: WhileNode):
+    def visit_WhileNode(self, node: WhileNode, context):
         res = RTResult()
 
         while True:
-            condition = res.register(self.visit(node.condition_node))
+            condition = res.register(self.visit(node.condition_node, context))
             if res.error:
                 return res
 
             if not condition.is_true():
                 break
 
-            res.register(self.visit(node.body))
+            res.register(self.visit(node.body, context))
             if res.error:
                 return res
         return res.success(None)
