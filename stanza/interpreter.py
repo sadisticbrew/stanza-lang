@@ -434,3 +434,11 @@ class Interpreter:
             if res.error:
                 return res
         return res.success(None)
+
+    def visit_FuncDefNode(self, node: FuncDefNode, context):
+        res = RTResult()
+        func = Function(node.func_name_tok, node.arg_name_toks, node.body_node, context)
+        if func.name == "|anonymous|":
+            return res.success(func)
+        context.symbol_table.set(func.name, func)
+        return res.success(func)
