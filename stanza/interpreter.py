@@ -16,6 +16,7 @@ from .errors import RTError
 from .nodes import (
     BinOpNode,
     ForNode,
+    FuncDefNode,
     IfNode,
     NumberNode,
     PowerOpNode,
@@ -95,6 +96,41 @@ class Boolean:
 
     def __repr__(self) -> str:
         return "fact" if self.value else "cap"
+
+
+class Function:
+    def __init__(self, name, args_node, body_node, original_context) -> None:
+        self.name = name.value if name else "|anonymous|"
+        self.args_node = args_node
+        self.body_node = body_node
+        self.context = original_context
+        self.set_pos()
+
+    def set_pos(self, pos_start=None, pos_end=None):
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+        return self
+
+    def execute(self, args, curr_interepreter):
+        res = RTResult()
+        new_context = Context(self.name, self.context, self.pos_start)
+        new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
+        if len(args) != len(self.args_node):
+            return res.failure(
+                RTError(
+                    self.pos_start,
+                    self.pos_end,
+                    f"Expected {len(self.args_node)} arguments, got {len(args)}",
+                    self.context,
+                )
+            )
+        for i, arg in enumerate(args):
+            new_context.symbol_table.set(self.args_node[i].value, arg)
+        res = curr_interepreter.visit(self.body_node, new_context)
+        return res
+
+    def __repr__(self) -> str:
+        return f"function {self.name}"
 
 
 class Number:
@@ -285,7 +321,7 @@ class Interpreter:
         value = res.register(self.visit(node.value, context))
         if res.error:
             return res
-        check = self.symbol_table.get(var_name)
+        check = context.symbol_table.get(var_name)
         if check:
             return res.failure(
                 RTError(
@@ -295,16 +331,16 @@ class Interpreter:
                     context,
                 )
             )
-        self.symbol_table.set(var_name, value)
+        context.symbol_table.set(var_name, value)
         return res.success(None)
 
     def visit_VarReassignmentNode(self, node: VarReassignmentNode, context):
         res = RTResult()
         var_name = node.var_name
-        check = self.symbol_table.get(var_name)
+        check = context.symbol_table.get(var_name)
         if check:
             value = res.register(self.visit(node.value, context))
-            self.symbol_table.set(var_name, value)
+            context.symbol_table.set(var_name, value)
             return res.success(None)
         return res.failure(
             RTError(
@@ -318,7 +354,7 @@ class Interpreter:
     def visit_VarAccessNode(self, node: VarAccessNode, context):
         res = RTResult()
         var_name = node.var_access_tok.value
-        value = self.symbol_table.get(var_name)
+        value = context.symbol_table.get(var_name)
         if not value:
             return res.failure(
                 RTError(
