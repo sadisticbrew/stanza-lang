@@ -249,7 +249,7 @@ class Parser:
         """Handles comparisions (<, >, ==, !=) and the logical NOT"""
         res = ParseResult()
 
-        if self.current_token.matches(TT_KEYWORD, "NOT"):
+        if self.current_token.matches(TT_KEYWORD, "not"):
             op_tok = self.current_token
             res.register(self._advance())
             node = res.register(self.comp_expr())

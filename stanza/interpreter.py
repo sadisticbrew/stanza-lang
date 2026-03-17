@@ -15,6 +15,7 @@ from .constants import (
 from .errors import RTError
 from .nodes import (
     BinOpNode,
+    CallNode,
     ForNode,
     FuncDefNode,
     IfNode,
@@ -42,9 +43,9 @@ class Context:
 
 
 class SymbolTable:
-    def __init__(self) -> None:
+    def __init__(self, parent=None) -> None:
         self.symbols = {}
-        self.parent = None
+        self.parent = parent
 
     def get(self, name):
         value = self.symbols.get(name, None)
@@ -85,10 +86,15 @@ class Boolean:
     def __init__(self, value) -> None:
         self.value = bool(value)
         self.set_pos()
+        self.set_context()
 
     def set_pos(self, pos_start=None, pos_end=None):
         self.pos_start = pos_start
         self.pos_end = pos_end
+        return self
+
+    def set_context(self, context=None):
+        self.context = context
         return self
 
     def is_true(self):
@@ -111,7 +117,7 @@ class Function:
         self.pos_end = pos_end
         return self
 
-    def execute(self, args, curr_interepreter):
+    def execute(self, args, curr_interepreter: Interpreter):
         res = RTResult()
         new_context = Context(self.name, self.context, self.pos_start)
         new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
@@ -126,8 +132,10 @@ class Function:
             )
         for i, arg in enumerate(args):
             new_context.symbol_table.set(self.args_node[i].value, arg)
-        res = curr_interepreter.visit(self.body_node, new_context)
-        return res
+        out = res.register(curr_interepreter.visit(self.body_node, new_context))
+        if res.error:
+            return res
+        return res.success(out)
 
     def __repr__(self) -> str:
         return f"function {self.name}"
@@ -291,7 +299,7 @@ class Interpreter:
         if node.op.type == TT_MINUS:
             number, error = number * Number(-1)
 
-        if node.op.matches(TT_KEYWORD, "NOT"):
+        if node.op.matches(TT_KEYWORD, "not"):
             if isinstance(number, Boolean):
                 number = Boolean(not number.value)
 
@@ -411,7 +419,7 @@ class Interpreter:
             return i > end_value.value
 
         while condition():
-            self.symbol_table.set(node.var_name_tok.value, Number(i))
+            context.symbol_table.set(node.var_name_tok.value, Number(i))
             i += step_value.value
 
             res.register(self.visit(node.body, context))
@@ -442,3 +450,25 @@ class Interpreter:
             return res.success(func)
         context.symbol_table.set(func.name, func)
         return res.success(func)
+
+    def visit_CallNode(self, node: CallNode, context):
+        res = RTResult()
+        name = node.node_to_call
+        args = node.arg_nodes
+        func = res.register(self.visit(name, context))
+        if res.error:
+            return res
+        if not isinstance(func, Function):
+            return res.failure(
+                RTError(
+                    node.pos_start, node.pos_end, f"{func} is not a function", context
+                )
+            )
+        evaluated_args = []
+        for arg in args:
+            evaluated_arg = res.register(self.visit(arg, context))
+            evaluated_args.append(evaluated_arg)
+        output = res.register(func.execute(evaluated_args, self))
+        if res.error:
+            return res
+        return res.success(output)

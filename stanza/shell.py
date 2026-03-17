@@ -12,7 +12,7 @@ def run(filename, text):
     if error:
         return None, error
     # Generate AST
-    print(tokens)
+    # print(tokens)
     parser = Parser(tokens)
     ast = parser.parse()
     # print(ast.node)
