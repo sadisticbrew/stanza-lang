@@ -1,17 +1,4 @@
-from .constants import (
-    TT_DIVIDE,
-    TT_EE,
-    TT_GT,
-    TT_GTE,
-    TT_KEYWORD,
-    TT_LT,
-    TT_LTE,
-    TT_MINUS,
-    TT_MODULO,
-    TT_MUL,
-    TT_NE,
-    TT_PLUS,
-)
+from .constants import COMPLEX_TOKENS, SIMPLE_TOKENS, TT
 from .errors import RTError
 from .nodes import (
     BinOpNode,
@@ -220,13 +207,13 @@ class Number:
 
     def compare(self, other, tok_type):
         if isinstance(other, Number):
-            if tok_type == TT_GT:
+            if tok_type == TT.GT:
                 return Boolean(self.value > other.value), None
-            elif tok_type == TT_LT:
+            elif tok_type == TT.LT:
                 return Boolean(self.value < other.value), None
-            elif tok_type == TT_GTE:
+            elif tok_type == TT.GTE:
                 return Boolean(self.value >= other.value), None
-            elif tok_type == TT_LTE:
+            elif tok_type == TT.LTE:
                 return Boolean(self.value <= other.value), None
         return None, RTError(other.pos_start, other.pos_end, "Expected a number")
 
@@ -261,21 +248,21 @@ class Interpreter:
         if res.error:
             return res
         op = node.op
-        if op.type == TT_PLUS:
+        if op.type == TT.PLUS:
             result, error = left + right
-        elif op.type == TT_MINUS:
+        elif op.type == TT.MINUS:
             result, error = left - right
-        elif op.type == TT_MUL:
+        elif op.type == TT.MUL:
             result, error = left * right
-        elif op.type == TT_DIVIDE:
+        elif op.type == TT.DIVIDE:
             result, error = left / right
-        elif op.type == TT_MODULO:
+        elif op.type == TT.MODULO:
             result, error = left % right
-        elif op.type == TT_EE:
+        elif op.type == TT.EE:
             result, error = left.stanza_eq(right)
-        elif op.type == TT_NE:
+        elif op.type == TT.NE:
             result, error = left.stanza_ne(right)
-        elif op.type in (TT_GT, TT_GTE, TT_LTE, TT_LT):
+        elif op.type in (TT.GT, TT.GTE, TT.LTE, TT.LT):
             result, error = left.compare(right, op.type)
         if error:
             return res.failure(error)
@@ -296,10 +283,10 @@ class Interpreter:
         if res.error:
             return res
         error = None
-        if node.op.type == TT_MINUS:
+        if node.op.type == TT.MINUS:
             number, error = number * Number(-1)
 
-        if node.op.matches(TT_KEYWORD, "not"):
+        if node.op.matches(TT.KEYWORD, "not"):
             if isinstance(number, Boolean):
                 number = Boolean(not number.value)
 

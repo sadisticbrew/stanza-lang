@@ -1,27 +1,4 @@
-from .constants import (
-    TT_ARROW,
-    TT_COMMA,
-    TT_DIVIDE,
-    TT_EE,
-    TT_EOF,
-    TT_EQ,
-    TT_EXPO,
-    TT_FLOAT,
-    TT_GT,
-    TT_GTE,
-    TT_IDENTIFIER,
-    TT_INT,
-    TT_KEYWORD,
-    TT_LPAREN,
-    TT_LT,
-    TT_LTE,
-    TT_MINUS,
-    TT_MODULO,
-    TT_MUL,
-    TT_NE,
-    TT_PLUS,
-    TT_RPAREN,
-)
+from .constants import COMPLEX_TOKENS, SIMPLE_TOKENS, TT
 from .errors import InvalidSyntaxError
 from .lexer import Token
 from .nodes import (
@@ -90,7 +67,7 @@ class Parser:
 
     def _expect_keyword(self, keyword):
         res = ParseResult()
-        if not self.current_token.matches(TT_KEYWORD, keyword):
+        if not self.current_token.matches(TT.KEYWORD, keyword):
             return res.failure(
                 InvalidSyntaxError(
                     self.current_token.pos_start,
@@ -103,7 +80,7 @@ class Parser:
 
     def parse(self):
         result = self.expression()
-        if not result.error and self.current_token.type != TT_EOF:
+        if not result.error and self.current_token.type != TT.EOF:
             return result.failure(
                 InvalidSyntaxError(
                     self.current_token.pos_start,
@@ -121,7 +98,7 @@ class Parser:
         token = self.current_token
 
         # Handle unary operators
-        if token.type in (TT_PLUS, TT_MINUS):
+        if token.type in (TT.PLUS, TT.MINUS):
             result.register(self._advance())
             factor = result.register(self.factor())
             if result.error:
@@ -129,22 +106,22 @@ class Parser:
             return result.success(UnaryOpNode(token, factor))
 
         # Handle numbers
-        elif token.type in (TT_INT, TT_FLOAT):
+        elif token.type in (TT.INT, TT.FLOAT):
             result.register(self._advance())
             return result.success(NumberNode(token))
 
         # Handle variables
-        elif token.type == TT_IDENTIFIER:
+        elif token.type == TT.IDENTIFIER:
             result.register(self._advance())
             return result.success(VarAccessNode(token))
 
         # Handle parentheses
-        elif token.type == TT_LPAREN:
+        elif token.type == TT.LPAREN:
             result.register(self._advance())
             expression = result.register(self.expression())
             if result.error:
                 return result
-            if self.current_token.type == TT_RPAREN:
+            if self.current_token.type == TT.RPAREN:
                 result.register(self._advance())
                 return result.success(expression)
             else:
@@ -156,25 +133,25 @@ class Parser:
                     )
                 )
 
-        elif token.matches(TT_KEYWORD, "if"):
+        elif token.matches(TT.KEYWORD, "if"):
             if_expr = result.register(self.if_expr())
             if result.error:
                 return result
             return result.success(if_expr)
 
-        elif token.matches(TT_KEYWORD, "for"):
+        elif token.matches(TT.KEYWORD, "for"):
             for_expr = result.register(self.for_expr())
             if result.error:
                 return result
             return result.success(for_expr)
 
-        elif token.matches(TT_KEYWORD, "while"):
+        elif token.matches(TT.KEYWORD, "while"):
             while_expr = result.register(self.while_expr())
             if result.error:
                 return result
             return result.success(while_expr)
 
-        elif token.matches(TT_KEYWORD, "fn"):
+        elif token.matches(TT.KEYWORD, "fn"):
             func_def = result.register(self.func_def())
             if result.error:
                 return result
@@ -193,22 +170,22 @@ class Parser:
         base_node = res.register(self.factor())
         if res.error:
             return res
-        while self.current_token.type == TT_LPAREN:
+        while self.current_token.type == TT.LPAREN:
             arg_nodes = []
             res.register(self._advance())
-            if self.current_token.type == TT_RPAREN:
+            if self.current_token.type == TT.RPAREN:
                 res.register(self._advance())
             else:
                 arg_nodes.append(res.register(self.expression()))
                 if res.error:
                     return res
 
-                while self.current_token.type == TT_COMMA:
+                while self.current_token.type == TT.COMMA:
                     res.register(self._advance())
                     arg_nodes.append(res.register(self.expression()))
                     if res.error:
                         return res
-                if self.current_token.type != TT_RPAREN:
+                if self.current_token.type != TT.RPAREN:
                     return res.failure(
                         InvalidSyntaxError(
                             self.current_token.pos_start,
@@ -229,7 +206,7 @@ class Parser:
         factor = result.register(self.call())
         if result.error:
             return result
-        if self.current_token.type == TT_EXPO:
+        if self.current_token.type == TT.EXPO:
             result.register(self._advance())
             right = result.register(self.specialist())
             if result.error:
@@ -239,17 +216,17 @@ class Parser:
 
     def term(self):
         """Handles the multiplication, division and modulo"""
-        return self._binary_operation(self.specialist, (TT_MUL, TT_DIVIDE, TT_MODULO))
+        return self._binary_operation(self.specialist, (TT.MUL, TT.DIVIDE, TT.MODULO))
 
     def arithmetic_expr(self):
         """Handles the addition and subtraction"""
-        return self._binary_operation(self.term, (TT_PLUS, TT_MINUS, TT_MUL, TT_DIVIDE))
+        return self._binary_operation(self.term, (TT.PLUS, TT.MINUS, TT.MUL, TT.DIVIDE))
 
     def comp_expr(self):
         """Handles comparisions (<, >, ==, !=) and the logical NOT"""
         res = ParseResult()
 
-        if self.current_token.matches(TT_KEYWORD, "not"):
+        if self.current_token.matches(TT.KEYWORD, "not"):
             op_tok = self.current_token
             res.register(self._advance())
             node = res.register(self.comp_expr())
@@ -260,7 +237,7 @@ class Parser:
         start_index = self.token_index
         node = res.register(
             self._binary_operation(
-                self.arithmetic_expr, (TT_EE, TT_NE, TT_GT, TT_GTE, TT_LTE, TT_LT)
+                self.arithmetic_expr, (TT.EE, TT.NE, TT.GT, TT.GTE, TT.LTE, TT.LT)
             )
         )
         if res.error:
@@ -300,7 +277,7 @@ class Parser:
 
         cases.append((condition, expr))
 
-        while self.current_token.matches(TT_KEYWORD, "elif"):
+        while self.current_token.matches(TT.KEYWORD, "elif"):
             res.register(self._advance())
 
             condition = res.register(self.expression())
@@ -316,7 +293,7 @@ class Parser:
                 return res
             cases.append((condition, expr))
 
-        if self.current_token.matches(TT_KEYWORD, "else"):
+        if self.current_token.matches(TT.KEYWORD, "else"):
             res.register(self._advance())
 
             expr = res.register(self.expression())
@@ -334,7 +311,7 @@ class Parser:
         if res.error:
             return res
 
-        if self.current_token.type != TT_IDENTIFIER:
+        if self.current_token.type != TT.IDENTIFIER:
             return res.failure(
                 InvalidSyntaxError(
                     self.current_token.pos_start,
@@ -361,7 +338,7 @@ class Parser:
         if res.error:
             return res
 
-        if self.current_token.matches(TT_KEYWORD, "step"):
+        if self.current_token.matches(TT.KEYWORD, "step"):
             res.register(self._advance())
             step = res.register(self.expression())
             if res.error:
@@ -411,9 +388,9 @@ class Parser:
         res = ParseResult()
 
         # case 0: it is a variable declaration
-        if self.current_token.matches(TT_KEYWORD, "let"):
+        if self.current_token.matches(TT.KEYWORD, "let"):
             res.register(self._advance())
-            if self.current_token.type != TT_IDENTIFIER:
+            if self.current_token.type != TT.IDENTIFIER:
                 return res.failure(
                     InvalidSyntaxError(
                         self.current_token.pos_start,
@@ -424,7 +401,7 @@ class Parser:
             var_name = self.current_token.value
             var_pos = self.current_token.pos_start.copy()
             res.register(self._advance())
-            if self.current_token.type != TT_EQ:
+            if self.current_token.type != TT.EQ:
                 return res.failure(
                     InvalidSyntaxError(
                         self.current_token.pos_start,
@@ -441,9 +418,9 @@ class Parser:
             )
 
         # case 1: it is a variable reassignment
-        elif self.current_token.type == TT_IDENTIFIER:
+        elif self.current_token.type == TT.IDENTIFIER:
             next_tok = self._peek()
-            if next_tok and next_tok.type == TT_EQ:
+            if next_tok and next_tok.type == TT.EQ:
                 var_name = self.current_token.value
                 var_pos = self.current_token.pos_start.copy()
 
@@ -461,7 +438,7 @@ class Parser:
         # case 2: std binary operations like add, sub, mul, etc.
 
         start_index = self.token_index
-        node = res.register(self._binary_operation(self.comp_expr, (TT_PLUS, TT_MINUS)))
+        node = res.register(self._binary_operation(self.comp_expr, (TT.PLUS, TT.MINUS)))
         if res.error:
             # If we haven't moved forward, show the general error
             if self.token_index == start_index:
@@ -483,10 +460,10 @@ class Parser:
         if res.error:
             return res
 
-        if self.current_token.type == TT_IDENTIFIER:
+        if self.current_token.type == TT.IDENTIFIER:
             func_name_tok = self.current_token
             res.register(self._advance())
-            if self.current_token.type != TT_LPAREN:
+            if self.current_token.type != TT.LPAREN:
                 return res.failure(
                     InvalidSyntaxError(
                         self.current_token.pos_start,
@@ -496,7 +473,7 @@ class Parser:
                 )
         else:
             func_name_tok = None
-            if self.current_token.type != TT_LPAREN:
+            if self.current_token.type != TT.LPAREN:
                 return res.failure(
                     InvalidSyntaxError(
                         self.current_token.pos_start,
@@ -507,14 +484,14 @@ class Parser:
 
         res.register(self._advance())
         arg_name_toks = []
-        if self.current_token.type == TT_IDENTIFIER:
+        if self.current_token.type == TT.IDENTIFIER:
             arg_name_toks.append(self.current_token)
             res.register(self._advance())
 
-            while self.current_token.type == TT_COMMA:
+            while self.current_token.type == TT.COMMA:
                 res.register(self._advance())
 
-                if self.current_token.type != TT_IDENTIFIER:
+                if self.current_token.type != TT.IDENTIFIER:
                     return res.failure(
                         InvalidSyntaxError(
                             self.current_token.pos_start,
@@ -526,7 +503,7 @@ class Parser:
                 arg_name_toks.append(self.current_token)
                 res.register(self._advance())
 
-            if self.current_token.type != TT_RPAREN:
+            if self.current_token.type != TT.RPAREN:
                 return res.failure(
                     InvalidSyntaxError(
                         self.current_token.pos_start,
@@ -535,7 +512,7 @@ class Parser:
                     )
                 )
         else:
-            if self.current_token.type != TT_RPAREN:
+            if self.current_token.type != TT.RPAREN:
                 return res.failure(
                     InvalidSyntaxError(
                         self.current_token.pos_start,
@@ -546,7 +523,7 @@ class Parser:
 
         res.register(self._advance())
 
-        if self.current_token.type != TT_ARROW:
+        if self.current_token.type != TT.ARROW:
             return res.failure(
                 InvalidSyntaxError(
                     self.current_token.pos_start,
