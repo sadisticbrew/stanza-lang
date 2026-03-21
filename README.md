@@ -58,8 +58,5 @@ fn add_numbers(a, b) -> a + b
 let sum = add_numbers(5, 10)
 ```
 
-## Running Stanza
-*(Add your installation or execution instructions here, e.g., how to run `shell.py`)*
-
 ---
 **Author:** Pratham Patel
