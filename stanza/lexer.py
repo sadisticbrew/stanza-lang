@@ -1,30 +1,4 @@
-from .constants import (
-    DIGITS,
-    KEYWORDS,
-    LETTERS,
-    TT_ARROW,
-    TT_COMMA,
-    TT_DIVIDE,
-    TT_EE,
-    TT_EOF,
-    TT_EQ,
-    TT_EXPO,
-    TT_FLOAT,
-    TT_GT,
-    TT_GTE,
-    TT_IDENTIFIER,
-    TT_INT,
-    TT_KEYWORD,
-    TT_LPAREN,
-    TT_LT,
-    TT_LTE,
-    TT_MINUS,
-    TT_MODULO,
-    TT_MUL,
-    TT_NE,
-    TT_PLUS,
-    TT_RPAREN,
-)
+from .constants import COMPLEX_TOKENS, DIGITS, KEYWORDS, LETTERS, SIMPLE_TOKENS, TT
 from .errors import ExpectedCharError, IllegalCharacterError, Position
 
 
@@ -65,74 +39,56 @@ class Lexer:
             self.text[self.pos.idx] if self.pos.idx < len(self.text) else None
         )
 
+    def _peek(self):
+        peek_idx = self.pos.idx + 1
+        return self.text[peek_idx] if peek_idx < len(self.text) else None
+
     def make_tokens(self):
         tokens = []
 
         while self.current_char:
             char = self.current_char
 
-            # TODO: This long elif chain CAN be replaced with a shorter one by using dictionary to map character and their enum token_type in constants.py but I am too lazy to do that right now.
             if char in " \t":
                 self._advance()
+                continue
 
-            elif char in DIGITS:
+            if char in DIGITS:
                 tokens.append(self._make_number())
+                continue
 
-            elif char.isalpha() or char == "_":
+            if char.isalpha() or char == "_":
                 tokens.append(self._make_identifier())
+                continue
 
-            elif char == "+":
-                tokens.append(Token(TT_PLUS, pos_start=self.pos.copy()))
-                self._advance()
-            elif char == "-":
-                tokens.append(self._make_minus_or_arrow())
-            elif char == "*":
-                tokens.append(Token(TT_MUL, pos_start=self.pos.copy()))
-                self._advance()
+            next_char = self._peek()
+            if next_char:
+                two_chars = self.current_char + next_char
+                if two_chars in COMPLEX_TOKENS:
+                    tokens.append(
+                        Token(COMPLEX_TOKENS[two_chars], pos_start=self.pos.copy())
+                    )
+                    self._advance()
+                    self._advance()
+                    continue
 
-            elif char == "/":
-                tokens.append(Token(TT_DIVIDE, pos_start=self.pos.copy()))
-                self._advance()
-
-            elif char == "%":
-                tokens.append(Token(TT_MODULO, pos_start=self.pos.copy()))
-                self._advance()
-
-            elif char == "^":
-                tokens.append(Token(TT_EXPO, pos_start=self.pos.copy()))
-                self._advance()
-
-            elif char == "!":
-                token, error = self._make_not_equal()
-                if error:
-                    return [], error
-                tokens.append(token)
-
-            elif char == "<":
-                tokens.append(self._make_less_than())
-
-            elif char == ">":
-                tokens.append(self._make_greater_than())
-
-            elif char == "=":
-                tokens.append(self._make_equals())
-
-            elif char == "(":
-                tokens.append(Token(TT_LPAREN, pos_start=self.pos.copy()))
-                self._advance()
-
-            elif char == ")":
-                tokens.append(Token(TT_RPAREN, pos_start=self.pos.copy()))
-                self._advance()
-            elif char == ",":
-                tokens.append(Token(TT_COMMA, pos_start=self.pos.copy()))
-                self._advance()
-            else:
+            if char == "!" and next_char != "=":
                 pos_start = self.pos.copy()
-                bad_char = char
                 self._advance()
-                return [], IllegalCharacterError(pos_start, self.pos, f"' {bad_char} '")
-        tokens.append(Token(TT_EOF, pos_start=self.pos))
+                return [], ExpectedCharError(
+                    pos_start, self.pos, "Expected '=' after '!'"
+                )
+
+            if char in SIMPLE_TOKENS:
+                tokens.append(Token(SIMPLE_TOKENS[char], pos_start=self.pos.copy()))
+                self._advance()
+                continue
+
+            pos_start = self.pos.copy()
+            bad_char = char
+            self._advance()
+            return [], IllegalCharacterError(pos_start, self.pos, f"' {bad_char} '")
+        tokens.append(Token(TT.EOF, pos_start=self.pos))
         return tokens, None
 
     """----------helper funcs----------"""
@@ -151,10 +107,10 @@ class Lexer:
                 num_str += self.current_char
             self._advance()
         if dot_count == 0:
-            return Token(TT_INT, int(num_str), pos_start=pos_start, pos_end=self.pos)
+            return Token(TT.INT, int(num_str), pos_start=pos_start, pos_end=self.pos)
         else:
             return Token(
-                TT_FLOAT, float(num_str), pos_start=pos_start, pos_end=self.pos
+                TT.FLOAT, float(num_str), pos_start=pos_start, pos_end=self.pos
             )
 
     def _make_identifier(self):
@@ -163,53 +119,5 @@ class Lexer:
         while self.current_char and self.current_char in LETTERS + "_":
             id_str += self.current_char
             self._advance()
-        token_type = TT_KEYWORD if id_str in KEYWORDS else TT_IDENTIFIER
+        token_type = TT.KEYWORD if id_str in KEYWORDS else TT.IDENTIFIER
         return Token(token_type, id_str, pos_start, pos_end=self.pos)
-
-    def _make_not_equal(self):
-        pos_start = self.pos.copy()
-        self._advance()
-        if self.current_char == "=":
-            self._advance()
-            return Token(TT_NE, pos_start=pos_start), None
-        self._advance()
-        return None, ExpectedCharError(pos_start, self.pos, "Expected '='")
-
-    def _make_equals(self):
-        pos_start = self.pos.copy()
-        self._advance()
-        if self.current_char == "=":
-            self._advance()
-            return Token(TT_EE, pos_start=pos_start)
-        return Token(TT_EQ, pos_start=pos_start)
-
-    def _make_less_than(self):
-        pos_start = self.pos.copy()
-        self._advance()
-
-        if self.current_char == "=":
-            self._advance()
-            return Token(TT_LTE, pos_start=pos_start)
-
-        return Token(TT_LT, pos_start=pos_start)
-
-    def _make_greater_than(self):
-        pos_start = self.pos.copy()
-        self._advance()
-
-        if self.current_char == "=":
-            self._advance()
-            return Token(TT_GTE, pos_start=pos_start)
-
-        return Token(TT_GT, pos_start=pos_start)
-
-    def _make_minus_or_arrow(self):
-        pos_start = self.pos.copy()
-        tok_type = TT_MINUS
-        self._advance()
-
-        if self.current_char == ">":
-            self._advance()
-            return Token(TT_ARROW, pos_start=pos_start, pos_end=self.pos.copy())
-
-        return Token(tok_type, pos_start=pos_start, pos_end=self.pos.copy)
