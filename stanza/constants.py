@@ -1,4 +1,5 @@
 import string
+from enum import Enum, auto
 
 DIGITS = "0123456789"
 LETTERS = string.ascii_letters
@@ -6,28 +7,54 @@ LETTERS_DIGITS = LETTERS + DIGITS
 
 """TOKENS"""
 
-TT_INT = "TT_INT"
-TT_FLOAT = "FLOAT"
-TT_PLUS = "PLUS"
-TT_MINUS = "MINUS"
-TT_DIVIDE = "DIVIDE"
-TT_MUL = "MUL"
-TT_LPAREN = "LPAREN"
-TT_RPAREN = "RPAREN"
-TT_MODULO = "MODULO"
-TT_EXPO = "EXPO"
-TT_EOF = "EOF"
-TT_EQ = "EQ"
-TT_IDENTIFIER = "IDENTIFIER"
-TT_KEYWORD = "KEYWORD"
-TT_EE = "EE"
-TT_NE = "NE"
-TT_LT = "LT"
-TT_GT = "GT"
-TT_LTE = "LTE"
-TT_GTE = "GTE"
-TT_COMMA = "COMMA"
-TT_ARROW = "ARROW"
+
+class TT(Enum):
+    INT = auto()
+    FLOAT = auto()
+    PLUS = auto()
+    MINUS = auto()
+    DIVIDE = auto()
+    MUL = auto()
+    LPAREN = auto()
+    RPAREN = auto()
+    MODULO = auto()
+    EXPO = auto()
+    EOF = auto()
+    EQ = auto()
+    IDENTIFIER = auto()
+    KEYWORD = auto()
+    EE = auto()
+    NE = auto()
+    LT = auto()
+    GT = auto()
+    LTE = auto()
+    GTE = auto()
+    COMMA = auto()
+    ARROW = auto()
+
+
+SIMPLE_TOKENS = {
+    "+": TT.PLUS,
+    "-": TT.MINUS,
+    "/": TT.DIVIDE,
+    "*": TT.MUL,
+    "(": TT.LPAREN,
+    ")": TT.RPAREN,
+    "%": TT.MODULO,
+    "^": TT.EXPO,
+    "=": TT.EQ,
+    ",": TT.COMMA,
+    "<": TT.LT,
+    ">": TT.GT,
+}
+
+COMPLEX_TOKENS = {
+    "->": TT.ARROW,
+    "==": TT.EE,
+    "!=": TT.NE,
+    "<=": TT.LTE,
+    ">=": TT.GTE,
+}
 
 KEYWORDS = [
     "let",
