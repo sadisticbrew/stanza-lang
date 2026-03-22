@@ -31,6 +31,7 @@ class TT(Enum):
     GTE = auto()
     COMMA = auto()
     ARROW = auto()
+    STRING = auto()
 
 
 SIMPLE_TOKENS = {
@@ -73,4 +74,10 @@ KEYWORDS = [
     "in",
     "fn",
 ]
+
+ESC_CHARS = {
+    "n": "\n",
+    "t": "\t",
+}
+
 BOOLEANS = ["fact", "cap"]

@@ -8,7 +8,7 @@ artih-expr :  term ((PLUS|MINUS) term)*
 
 term : factor ((MULTIPLY|DIVIDE) factor)*
 
-factor : INT|FLOAT
+factor : INT|FLOAT|STRING|IDENTIFIER
        : (PLUS | MINUS) INT|FLOAT
        : LPAREN expression RPAREN
        : if-expr

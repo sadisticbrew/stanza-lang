@@ -1,4 +1,12 @@
-from .constants import COMPLEX_TOKENS, DIGITS, KEYWORDS, LETTERS, SIMPLE_TOKENS, TT
+from .constants import (
+    COMPLEX_TOKENS,
+    DIGITS,
+    ESC_CHARS,
+    KEYWORDS,
+    LETTERS,
+    SIMPLE_TOKENS,
+    TT,
+)
 from .errors import ExpectedCharError, IllegalCharacterError, Position
 
 
@@ -61,6 +69,10 @@ class Lexer:
                 tokens.append(self._make_identifier())
                 continue
 
+            if char == '"':
+                tokens.append(self._make_string())
+                continue
+
             next_char = self._peek()
             if next_char:
                 two_chars = self.current_char + next_char
@@ -121,3 +133,26 @@ class Lexer:
             self._advance()
         token_type = TT.KEYWORD if id_str in KEYWORDS else TT.IDENTIFIER
         return Token(token_type, id_str, pos_start, pos_end=self.pos)
+
+    def _make_string(self):
+        string_str = ""
+        pos_start = self.pos.copy()
+        self._advance()
+        escape_char = False
+
+        while self.current_char is not None and (
+            self.current_char != '"' or escape_char
+        ):
+            if escape_char:
+                string_str += ESC_CHARS.get(self.current_char, self.current_char)
+            else:
+                if self.current_char == "\\":
+                    escape_char = True
+                else:
+                    string_str += self.current_char
+            self._advance()
+
+        escape_char = False
+        self._advance()
+
+        return Token(TT.STRING, string_str, pos_start, pos_end=self.pos)
