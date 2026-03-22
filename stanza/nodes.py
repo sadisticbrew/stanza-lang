@@ -13,6 +13,11 @@ class NumberNode:
         return f"{self.token}"
 
 
+class StringNode(NumberNode):
+    def __init__(self, token: Token) -> None:
+        super().__init__(token)
+
+
 class BinOpNode:
     def __init__(self, left_node, op_token, right_node) -> None:
         self.op = op_token

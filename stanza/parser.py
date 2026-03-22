@@ -1,4 +1,4 @@
-from .constants import COMPLEX_TOKENS, SIMPLE_TOKENS, TT
+from .constants import TT
 from .errors import InvalidSyntaxError
 from .lexer import Token
 from .nodes import (
@@ -9,6 +9,7 @@ from .nodes import (
     IfNode,
     NumberNode,
     PowerOpNode,
+    StringNode,
     UnaryOpNode,
     VarAccessNode,
     VarAssignmentNode,
@@ -114,6 +115,10 @@ class Parser:
         elif token.type == TT.IDENTIFIER:
             result.register(self._advance())
             return result.success(VarAccessNode(token))
+
+        elif token.type == TT.STRING:
+            result.register(self._advance())
+            return result.success(StringNode(token))
 
         # Handle parentheses
         elif token.type == TT.LPAREN:
