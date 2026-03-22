@@ -1,4 +1,4 @@
-from .constants import COMPLEX_TOKENS, SIMPLE_TOKENS, TT
+from .constants import TT
 from .errors import RTError
 from .nodes import (
     BinOpNode,
@@ -69,9 +69,10 @@ class RTResult:
         return self
 
 
-class Boolean:
-    def __init__(self, value) -> None:
-        self.value = bool(value)
+class Value:
+    """Base class for all runtime values to handle shared properties."""
+
+    def __init__(self):
         self.set_pos()
         self.set_context()
 
@@ -84,6 +85,12 @@ class Boolean:
         self.context = context
         return self
 
+
+class Boolean(Value):
+    def __init__(self, value) -> None:
+        super().__init__()
+        self.value = bool(value)
+
     def is_true(self):
         return self.value
 
@@ -91,23 +98,19 @@ class Boolean:
         return "fact" if self.value else "cap"
 
 
-class Function:
+class Function(Value):
     def __init__(self, name, args_node, body_node, original_context) -> None:
+        super().__init__()
         self.name = name.value if name else "|anonymous|"
         self.args_node = args_node
         self.body_node = body_node
-        self.context = original_context
-        self.set_pos()
+        self.set_context(original_context)
 
-    def set_pos(self, pos_start=None, pos_end=None):
-        self.pos_start = pos_start
-        self.pos_end = pos_end
-        return self
-
-    def execute(self, args, curr_interepreter: Interpreter):
+    def execute(self, args, curr_interpreter):
         res = RTResult()
         new_context = Context(self.name, self.context, self.pos_start)
         new_context.symbol_table = SymbolTable(new_context.parent.symbol_table)
+
         if len(args) != len(self.args_node):
             return res.failure(
                 RTError(
@@ -117,9 +120,11 @@ class Function:
                     self.context,
                 )
             )
+
         for i, arg in enumerate(args):
             new_context.symbol_table.set(self.args_node[i].value, arg)
-        out = res.register(curr_interepreter.visit(self.body_node, new_context))
+
+        out = res.register(curr_interpreter.visit(self.body_node, new_context))
         if res.error:
             return res
         return res.success(out)
@@ -128,20 +133,10 @@ class Function:
         return f"function {self.name}"
 
 
-class Number:
+class Number(Value):
     def __init__(self, value) -> None:
+        super().__init__()
         self.value = value
-        self.set_pos()
-        self.set_context()
-
-    def set_pos(self, pos_start=None, pos_end=None):
-        self.pos_start = pos_start
-        self.pos_end = pos_end
-        return self
-
-    def set_context(self, context=None):
-        self.context = context
-        return self
 
     def __add__(self, other):
         if isinstance(other, Number):
@@ -180,7 +175,7 @@ class Number:
                     self.context,
                 )
             return Number(self.value % other.value), None
-        return NotImplemented  # This helps coverage tools know this path exists
+        return NotImplemented
 
     def __pow__(self, other_number):
         if isinstance(other_number, Number):
@@ -189,23 +184,15 @@ class Number:
 
     def stanza_eq(self, other):
         if isinstance(other, Number):
-            return (
-                (Boolean(self.value == other.value), None)
-                if self.value == other.value
-                else (Boolean(self.value == other.value), None)
-            )
+            return Boolean(self.value == other.value), None
         return Boolean(False), None
 
     def stanza_ne(self, other):
         if isinstance(other, Number):
-            return (
-                (Boolean(self.value != other.value), None)
-                if self.value != other.value
-                else (Boolean(self.value != other.value), None)
-            )
+            return Boolean(self.value != other.value), None
         return Boolean(False), None
 
-    def compare(self, other, tok_type):
+    def compare(self, other, tok_type, context):
         if isinstance(other, Number):
             if tok_type == TT.GT:
                 return Boolean(self.value > other.value), None
@@ -215,7 +202,9 @@ class Number:
                 return Boolean(self.value >= other.value), None
             elif tok_type == TT.LTE:
                 return Boolean(self.value <= other.value), None
-        return None, RTError(other.pos_start, other.pos_end, "Expected a number")
+        return None, RTError(
+            other.pos_start, other.pos_end, "Expected a number", context
+        )
 
     def is_true(self):
         return self.value != 0
@@ -263,7 +252,7 @@ class Interpreter:
         elif op.type == TT.NE:
             result, error = left.stanza_ne(right)
         elif op.type in (TT.GT, TT.GTE, TT.LTE, TT.LT):
-            result, error = left.compare(right, op.type)
+            result, error = left.compare(right, op.type, context)
         if error:
             return res.failure(error)
         else:
