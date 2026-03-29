@@ -8,6 +8,7 @@ from .nodes import (
     IfNode,
     NumberNode,
     PowerOpNode,
+    StringNode,
     UnaryOpNode,
     VarAccessNode,
     VarAssignmentNode,
@@ -190,7 +191,7 @@ class Number(Value):
     def stanza_ne(self, other):
         if isinstance(other, Number):
             return Boolean(self.value != other.value), None
-        return Boolean(False), None
+        return Boolean(True), None
 
     def compare(self, other, tok_type, context):
         if isinstance(other, Number):
@@ -211,6 +212,52 @@ class Number(Value):
 
     def __repr__(self) -> str:
         return f"{self.value}"
+
+
+class String(Value):
+    def __init__(self, value) -> None:
+        super().__init__()
+        self.value = value
+
+    def __add__(self, other):
+        if isinstance(other, String):
+            return String(self.value + other.value), None
+        return None, RTError(
+            self.pos_start, self.pos_end, "Illegal operation", self.context
+        )
+
+    def __mul__(self, other):
+        if isinstance(other, Number):
+            return String(self.value * other.value), None
+        return None, RTError(
+            self.pos_start, self.pos_end, "Illegal operation", self.context
+        )
+
+    def __len__(self):
+        return Number(len(self.value)), None
+
+    def __bool__(self):
+        return len(self.value) > 0
+
+    def stanza_eq(self, other):
+        if isinstance(other, String):
+            return Boolean(self.value == other.value), None
+        return None, RTError(
+            other.pos_start, other.pos_end, "Expected a string", self.context
+        )
+
+    def stanza_ne(self, other):
+        if isinstance(other, String):
+            return Boolean(self.value != other.value), None
+        return None, RTError(
+            other.pos_start, other.pos_end, "Expected a string", self.context
+        )
+
+    def is_true(self):
+        return len(self.value) > 0
+
+    def __repr__(self) -> str:
+        return f'"{self.value}"'
 
 
 """Interpreter"""
@@ -266,6 +313,14 @@ class Interpreter:
             .set_pos(node.pos_start, node.pos_end)
         )
 
+    def visit_StringNode(self, node: StringNode, context):
+        result = RTResult()
+        return result.success(
+            String(node.token.value)
+            .set_context(context)
+            .set_pos(node.pos_start, node.pos_end)
+        )
+
     def visit_UnaryOpNode(self, node: UnaryOpNode, context):
         res = RTResult()
         number = res.register(self.visit(node.node, context))
@@ -303,6 +358,7 @@ class Interpreter:
         res = RTResult()
         var_name = node.var_name
         value = res.register(self.visit(node.value, context))
+        print(value)
         if res.error:
             return res
         check = context.symbol_table.get(var_name)
@@ -339,6 +395,7 @@ class Interpreter:
         res = RTResult()
         var_name = node.var_access_tok.value
         value = context.symbol_table.get(var_name)
+        # print(value)
         if not value:
             return res.failure(
                 RTError(

@@ -75,9 +75,6 @@ KEYWORDS = [
     "fn",
 ]
 
-ESC_CHARS = {
-    "n": "\n",
-    "t": "\t",
-}
+ESC_CHARS = {"n": "\n", "t": "\t", '"': '"'}
 
 BOOLEANS = ["fact", "cap"]
